@@ -1,0 +1,78 @@
+# ---------------------------------
+# Shared Setup (local + production)
+# ---------------------------------
+(setup) {
+    # Encode responses
+    encode zstd gzip
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+        Content-Security-Policy "default-src 'self'; img-src 'self' data: blob: https://fastapi.tiangolo.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self'; connect-src 'self' https: http:;"
+    }
+
+    # Block dangerous HTTP methods
+    @trace method TRACE
+    respond @trace "Method not allowed" 405
+
+    # ---------------------------------
+    # Backend (FastAPI)
+    # ---------------------------------
+    @backend_api {
+        path /api /api/*
+    }
+
+    handle @backend_api {
+        request_body {
+            max_size 200MB
+        }
+
+        reverse_proxy backend:8000 {
+            flush_interval -1
+
+            transport http {
+                read_timeout 3600s
+                write_timeout 3600s
+                dial_timeout 10s
+            }
+
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    # Catch-all for other requests
+    handle {
+        respond "Not Found" 404
+    }
+
+    # Logging
+    log {
+        output stdout
+        format json
+        level INFO
+    }
+}
+
+# ---------------------------------
+# Local Development
+# ---------------------------------
+localhost {
+    import setup
+}
+
+# ---------------------------------
+# Production
+# ---------------------------------
+your-domain.com, www.your-domain.com {
+    import setup
+    
+    # Handle www redirect
+    @www host www.your-domain.com
+    handle @www {
+        redir https://your-domain.com{uri} permanent
+    }
+}

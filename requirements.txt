@@ -1,0 +1,22 @@
+# Core Libraries
+boto3
+pytest
+aiofiles
+rank-bm25
+python-dotenv
+
+# Unstructured
+unstructured[pdf,docx,pptx]
+
+# FastAPI
+fastapi[standard]
+
+# Database / Vector Store
+pgvector
+psycopg[binary,pool]
+
+# LangChain
+langchain
+langchain-ollama
+langchain-community
+langchain-unstructured
